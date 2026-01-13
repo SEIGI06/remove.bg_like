@@ -56,7 +56,9 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
     const sourceData = jimpImage.bitmap.data;
 
     // Threshold to remove low-confidence noise (0-255)
-    const THRESHOLD = 25; 
+    // Increased to 100 to ensure background noise is cleanly removed, 
+    // while keeping edges (100-255) soft.
+    const THRESHOLD = 100; 
 
     for (let i = 0; i < width * height; i++) {
         const idx = i * 4;     // RGBA index
