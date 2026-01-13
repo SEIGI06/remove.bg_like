@@ -13,6 +13,7 @@ const supabase = createClient(
 export default function DashboardPage() {
     const [user, setUser] = useState<any>(null);
     const [credits, setCredits] = useState<number | null>(null);
+    const [showCreditModal, setShowCreditModal] = useState(false);
 
     useEffect(() => {
         supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -103,88 +104,111 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Usage Stats & Credit Shop */}
-                        <div className="space-y-6">
-                            {/* Current Balance - Full Width */}
-                            <div className="bg-slate-900 p-8 rounded-2xl shadow-lg text-white relative overflow-hidden flex items-center justify-between">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full blur-[100px] opacity-20 transform translate-x-20 -translate-y-20" />
-                                
-                                <div className="relative z-10">
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-2">Available Credits</h3>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-5xl font-extrabold tracking-tighter">
-                                            {credits !== null ? credits : '-'}
-                                        </span>
-                                        <span className="text-lg font-medium text-slate-400">remaining</span>
-                                    </div>
-                                </div>
-                                <div className="relative z-10 hidden sm:block text-right">
-                                    <p className="text-sm text-slate-400 mb-1">Status</p>
-                                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-bold uppercase tracking-wider">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Active
+                        {/* Usage Stats (Real) */}
+                        <div className="bg-slate-900 p-8 rounded-2xl shadow-lg text-white relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500 rounded-full blur-[80px] opacity-20 transform translate-x-10 -translate-y-10 group-hover:opacity-30 transition-opacity" />
+                            
+                            <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 relative z-10 flex justify-between items-center">
+                                Available Credits
+                                <span className="bg-slate-800 text-xs px-2 py-1 rounded text-slate-300">API</span>
+                            </h3>
+                            
+                            <div className="relative z-10">
+                                <div className="flex items-baseline gap-2 mb-6">
+                                    <span className="text-6xl font-extrabold tracking-tighter">
+                                        {credits !== null ? credits : '-'}
                                     </span>
+                                    <span className="text-lg font-medium text-slate-400">remaining</span>
                                 </div>
+                                
+                                <button 
+                                    onClick={() => setShowCreditModal(true)}
+                                    className="w-full bg-white text-slate-900 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    ⚡ Buy More Credits
+                                </button>
+                                <p className="text-xs text-center mt-3 text-slate-500">
+                                    1 Credit = 1 Image Removal
+                                </p>
                             </div>
+                        </div>
+                    </div>
 
-                            {/* Credit Shop (McDonald's Style) */}
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                    Top Up Credits <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Secure Payment via Stripe</span>
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Credit Shop Modal */}
+                    {showCreditModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-10 relative animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                    onClick={() => setShowCreditModal(false)}
+                                    className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"
+                                >
+                                    ✕
+                                </button>
+
+                                <div className="text-center mb-10">
+                                    <h2 className="text-3xl font-extrabold text-slate-900 mb-3">Top Up Your Credits</h2>
+                                    <p className="text-slate-500 text-lg">Choose a pack that fits your needs. Secure payment via Stripe.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {/* Small Pack */}
-                                    <div className="bg-white border-2 border-slate-100 p-6 rounded-2xl hover:border-blue-200 hover:shadow-lg transition-all group relative overflow-hidden">
-                                        <div className="mb-4">
-                                            <span className="text-2xl pt-2">🥤</span>
+                                    <div className="bg-white border-2 border-slate-100 p-6 rounded-2xl hover:border-blue-200 hover:shadow-lg transition-all group relative overflow-hidden flex flex-col items-center text-center">
+                                        <div className="mb-4 text-center">
+                                            <span className="text-4xl block mb-2">🥤</span>
                                             <h4 className="font-bold text-slate-900 text-lg">Small Pack</h4>
                                             <p className="text-slate-500 text-sm">Starter Boost</p>
                                         </div>
-                                        <div className="mb-6">
-                                            <p className="text-3xl font-extrabold text-slate-900">50 <span className="text-sm font-medium text-slate-400">credits</span></p>
-                                            <p className="text-slate-900 font-bold mt-1">$4.99</p>
+                                        <div className="mb-8">
+                                            <p className="text-4xl font-extrabold text-slate-900">50 <span className="text-sm font-medium text-slate-400">credits</span></p>
+                                            <p className="text-slate-900 font-bold mt-2">$4.99</p>
                                         </div>
-                                        <a href="#" className="block w-full py-2.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                                        <a href="#" className="w-full py-3 rounded-xl bg-slate-100 text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors">
                                             Buy Small
                                         </a>
                                     </div>
 
                                     {/* Medium Pack (Highlighted) */}
-                                    <div className="bg-white border-2 border-blue-500 p-6 rounded-2xl shadow-xl shadow-blue-500/10 relative overflow-hidden transform md:-translate-y-2">
-                                        <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                                            Best Value
+                                    <div className="bg-white border-2 border-blue-500 p-6 rounded-2xl shadow-xl shadow-blue-500/10 relative overflow-hidden transform md:-translate-y-4 flex flex-col items-center text-center ring-4 ring-blue-500/10">
+                                        <div className="absolute top-0 right-0 left-0 bg-blue-500 text-white text-xs font-bold py-1 uppercase tracking-wider">
+                                            Most Popular
                                         </div>
-                                        <div className="mb-4">
-                                            <span className="text-3xl">🥤</span>
+                                        <div className="mb-4 mt-4 text-center">
+                                            <span className="text-5xl block mb-2">🥤</span>
                                             <h4 className="font-bold text-slate-900 text-xl">Medium Pack</h4>
-                                            <p className="text-blue-600 text-sm font-medium">Most Popular</p>
+                                            <p className="text-blue-600 text-sm font-bold">Best Value</p>
                                         </div>
-                                        <div className="mb-6">
-                                            <p className="text-4xl font-extrabold text-slate-900">150 <span className="text-sm font-medium text-slate-400">credits</span></p>
-                                            <p className="text-slate-900 font-bold mt-1">$12.99</p>
+                                        <div className="mb-8">
+                                            <p className="text-5xl font-extrabold text-slate-900">150 <span className="text-sm font-medium text-slate-400">credits</span></p>
+                                            <p className="text-slate-900 font-bold mt-2">$12.99</p>
                                         </div>
-                                        <a href="#" className="block w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-center shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-colors">
+                                        <a href="#" className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-colors">
                                             Buy Medium
                                         </a>
                                     </div>
 
                                     {/* Large Pack */}
-                                    <div className="bg-white border-2 border-slate-100 p-6 rounded-2xl hover:border-purple-200 hover:shadow-lg transition-all group">
-                                        <div className="mb-4">
-                                            <span className="text-4xl">🥤</span>
+                                    <div className="bg-white border-2 border-slate-100 p-6 rounded-2xl hover:border-purple-200 hover:shadow-lg transition-all group relative overflow-hidden flex flex-col items-center text-center">
+                                        <div className="mb-4 text-center">
+                                            <span className="text-6xl block mb-2">🥤</span>
                                             <h4 className="font-bold text-slate-900 text-lg">Large Pack</h4>
                                             <p className="text-slate-500 text-sm">Agency Size</p>
                                         </div>
-                                        <div className="mb-6">
-                                            <p className="text-3xl font-extrabold text-slate-900">500 <span className="text-sm font-medium text-slate-400">credits</span></p>
-                                            <p className="text-slate-900 font-bold mt-1">$34.99</p>
+                                        <div className="mb-8">
+                                            <p className="text-4xl font-extrabold text-slate-900">500 <span className="text-sm font-medium text-slate-400">credits</span></p>
+                                            <p className="text-slate-900 font-bold mt-2">$34.99</p>
                                         </div>
-                                        <a href="#" className="block w-full py-2.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                                        <a href="#" className="w-full py-3 rounded-xl bg-slate-100 text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors">
                                             Buy Large
                                         </a>
                                     </div>
                                 </div>
+                                
+                                <p className="text-center text-slate-400 text-sm mt-8">
+                                    Transactions are secure and encrypted. Credits are added immediately.
+                                </p>
                             </div>
                         </div>
+                    )}
                     </div>
 
                     {/* RIGHT COLUMN: API Keys & Docs (8 cols) */}
