@@ -75,7 +75,7 @@ export default function LoginPage() {
                         }} 
                         providers={['github', 'google']}
                         theme="light"
-                        showLinks={false}
+                        showLinks={true}
                     />
                     <div className="mt-6 text-center">
                         <p className="text-xs text-slate-400">
