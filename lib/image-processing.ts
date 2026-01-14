@@ -4,6 +4,33 @@ import { Jimp } from 'jimp';
 import { PNG } from 'pngjs';
 
 /**
+ * Generate a Gaussian kernel for blur operations
+ */
+function generateGaussianKernel(size: number, sigma: number): number[][] {
+    const kernel: number[][] = [];
+    const mean = Math.floor(size / 2);
+    let sum = 0;
+    
+    for (let y = 0; y < size; y++) {
+        kernel[y] = [];
+        for (let x = 0; x < size; x++) {
+            const exponent = -((x - mean) ** 2 + (y - mean) ** 2) / (2 * sigma ** 2);
+            kernel[y][x] = Math.exp(exponent) / (2 * Math.PI * sigma ** 2);
+            sum += kernel[y][x];
+        }
+    }
+    
+    // Normalize kernel
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            kernel[y][x] /= sum;
+        }
+    }
+    
+    return kernel;
+}
+
+/**
  * Process the image to remove the background.
  * @param imageBuffer - The input image buffer.
  * @returns - The processed image buffer (PNG).
@@ -37,39 +64,81 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
 
     const maskData = mask.data; // Uint8Array
     
-    // 4.5 ERODE MASK (New: Shrink mask by 1px to remove halos)
-    // We create a new buffer for the eroded mask to avoid reading/writing same buffer
-    const erodedMask = new Uint8Array(maskData.length);
-    const widthRaw = width;
-    const heightRaw = height;
-
-    for (let y = 0; y < heightRaw; y++) {
-        for (let x = 0; x < widthRaw; x++) {
-            const idx = y * widthRaw + x;
+    // 4.5 ADVANCED MASK REFINEMENT (Gaussian Blur + Adaptive Erosion)
+    console.time('Mask Refinement');
+    
+    // Step 1: Apply selective Gaussian blur to smooth edges (reduces aliasing)
+    const blurredMask = new Uint8Array(maskData.length);
+    const sigma = 1.0;
+    const kernelSize = 5;
+    const kernel = generateGaussianKernel(kernelSize, sigma);
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            const currentVal = maskData[idx];
             
-            // Optimization: Only erode pixels that are not fully background
-            // (If it's already 0, it stays 0)
-            if (maskData[idx] > 0) {
-                // Check neighbors (up, down, left, right)
-                // If we are at edge, assume background (0)
-                const val = maskData[idx];
+            // Only apply blur to edge pixels (50-250 range), preserve solid areas
+            if (currentVal > 50 && currentVal < 250) {
+                let sum = 0;
+                let weightSum = 0;
                 
-                const up    = (y > 0) ? maskData[idx - widthRaw] : 0;
-                const down  = (y < heightRaw - 1) ? maskData[idx + widthRaw] : 0;
-                const left  = (x > 0) ? maskData[idx - 1] : 0;
-                const right = (x < widthRaw - 1) ? maskData[idx + 1] : 0;
-
-                // Erosion: The new value is the MINIMUM of the neighbors.
-                // This means if I'm next to a black pixel (0), I become 0.
-                // We keep 'val' in the min calculation to preserve current darkness if neighbors are brighter
-                let minVal = Math.min(val, up, down, left, right);
+                const halfKernel = Math.floor(kernelSize / 2);
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        const ny = y + ky;
+                        const nx = x + kx;
+                        
+                        if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                            const nIdx = ny * width + nx;
+                            const weight = kernel[ky + halfKernel][kx + halfKernel];
+                            sum += maskData[nIdx] * weight;
+                            weightSum += weight;
+                        }
+                    }
+                }
                 
-                erodedMask[idx] = minVal;
+                blurredMask[idx] = Math.round(sum / weightSum);
+            } else {
+                blurredMask[idx] = currentVal;
+            }
+        }
+    }
+    
+    // Step 2: Apply adaptive erosion (preserves fine details)
+    const erodedMask = new Uint8Array(maskData.length);
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            
+            if (blurredMask[idx] > 0) {
+                const val = blurredMask[idx];
+                
+                // Get 4-connected neighbors
+                const up    = (y > 0) ? blurredMask[idx - width] : 0;
+                const down  = (y < height - 1) ? blurredMask[idx + width] : 0;
+                const left  = (x > 0) ? blurredMask[idx - 1] : 0;
+                const right = (x < width - 1) ? blurredMask[idx + 1] : 0;
+                
+                // Adaptive erosion: Only erode if at least 2 neighbors are background
+                const neighbors = [up, down, left, right];
+                const backgroundCount = neighbors.filter(n => n < 50).length;
+                
+                if (backgroundCount >= 2) {
+                    // Strong erosion on edge pixels
+                    erodedMask[idx] = Math.min(val, up, down, left, right);
+                } else {
+                    // Preserve fine details (hair, fingers, etc.)
+                    erodedMask[idx] = val;
+                }
             } else {
                 erodedMask[idx] = 0;
             }
         }
     }
+    
+    console.timeEnd('Mask Refinement');
     
     // Parse background color if provided
     let bgR = 255, bgG = 255, bgB = 255;
@@ -111,21 +180,112 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
         if (maskVal > THRESHOLD) {
             alpha = (maskVal - THRESHOLD) / (255 - THRESHOLD);
         }
+        
+        // ALPHA MATTING REFINEMENT: Refine alpha in transition zones
+        if (alpha > 0.1 && alpha < 0.9) {
+            // We're in a transition zone - apply alpha matting refinement
+            const x = i % width;
+            const y = Math.floor(i / width);
+            
+            // Sample neighborhood to estimate foreground/background colors
+            let fgSamples = 0, bgSamples = 0;
+            let fgR = 0, fgG = 0, fgB = 0;
+            let bgR_sum = hasBgColor ? bgR : 0, bgG_sum = hasBgColor ? bgG : 0, bgB_sum = hasBgColor ? bgB : 0;
+            
+            const sampleRadius = 3;
+            for (let dy = -sampleRadius; dy <= sampleRadius; dy++) {
+                for (let dx = -sampleRadius; dx <= sampleRadius; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        const nIdx = ny * width + nx;
+                        const nMaskVal = erodedMask[nIdx];
+                        const nPixIdx = nIdx * 4;
+                        
+                        if (nMaskVal > 200) {
+                            // Likely foreground
+                            fgR += sourceData[nPixIdx];
+                            fgG += sourceData[nPixIdx + 1];
+                            fgB += sourceData[nPixIdx + 2];
+                            fgSamples++;
+                        } else if (nMaskVal < 30 && !hasBgColor) {
+                            // Likely background (only if no custom bg color)
+                            bgR_sum += sourceData[nPixIdx];
+                            bgG_sum += sourceData[nPixIdx + 1];
+                            bgB_sum += sourceData[nPixIdx + 2];
+                            bgSamples++;
+                        }
+                    }
+                }
+            }
+            
+            if (fgSamples > 0) {
+                fgR /= fgSamples;
+                fgG /= fgSamples;
+                fgB /= fgSamples;
+            }
+            
+            if (!hasBgColor && bgSamples > 0) {
+                bgR_sum /= bgSamples;
+                bgG_sum /= bgSamples;
+                bgB_sum /= bgSamples;
+            }
+            
+            // Refine alpha using color information
+            // If current pixel is closer to bg color, reduce alpha
+            if (fgSamples > 0) {
+                const distToFg = Math.sqrt((srcR - fgR) ** 2 + (srcG - fgG) ** 2 + (srcB - fgB) ** 2);
+                const distToBg = Math.sqrt((srcR - bgR_sum) ** 2 + (srcG - bgG_sum) ** 2 + (srcB - bgB_sum) ** 2);
+                
+                if (distToFg + distToBg > 0) {
+                    const colorAlpha = distToBg / (distToFg + distToBg);
+                    // Blend with original alpha
+                    alpha = alpha * 0.6 + colorAlpha * 0.4;
+                }
+            }
+        }
 
         if (hasBgColor) {
-            // SOFT BLENDING on Solid Background
-            // Formula: Final = (Source * Alpha) + (Background * (1 - Alpha))
+            // IMPROVED BLENDING with Gamma Correction
+            // Convert to linear space for proper blending
+            const sR_linear = Math.pow(srcR / 255, 2.2);
+            const sG_linear = Math.pow(srcG / 255, 2.2);
+            const sB_linear = Math.pow(srcB / 255, 2.2);
+            const bR_linear = Math.pow(bgR / 255, 2.2);
+            const bG_linear = Math.pow(bgG / 255, 2.2);
+            const bB_linear = Math.pow(bgB / 255, 2.2);
+            
+            // Blend in linear space
             const invAlpha = 1 - alpha;
-
-            outputBuffer[idx]     = (srcR * alpha) + (bgR * invAlpha); // R
-            outputBuffer[idx + 1] = (srcG * alpha) + (bgG * invAlpha); // G
-            outputBuffer[idx + 2] = (srcB * alpha) + (bgB * invAlpha); // B
+            const finalR_linear = (sR_linear * alpha) + (bR_linear * invAlpha);
+            const finalG_linear = (sG_linear * alpha) + (bG_linear * invAlpha);
+            const finalB_linear = (sB_linear * alpha) + (bB_linear * invAlpha);
+            
+            // Convert back to sRGB space
+            outputBuffer[idx]     = Math.pow(finalR_linear, 1/2.2) * 255;
+            outputBuffer[idx + 1] = Math.pow(finalG_linear, 1/2.2) * 255;
+            outputBuffer[idx + 2] = Math.pow(finalB_linear, 1/2.2) * 255;
             outputBuffer[idx + 3] = 255; // Fully Opaque result
         } else {
-            // TRANSPARENT Background
-            outputBuffer[idx]     = srcR;
-            outputBuffer[idx + 1] = srcG;
-            outputBuffer[idx + 2] = srcB;
+            // TRANSPARENT Background with Color Defringing
+            let finalR = srcR;
+            let finalG = srcG;
+            let finalB = srcB;
+            
+            // Apply color defringing on semi-transparent pixels
+            if (alpha > 0.3 && alpha < 0.95) {
+                // Slightly desaturate edge pixels to remove color contamination
+                const luminance = 0.299 * srcR + 0.587 * srcG + 0.114 * srcB;
+                const defringeAmount = (1 - alpha) * 0.2; // Stronger defringing on more transparent pixels
+                
+                finalR = srcR * (1 - defringeAmount) + luminance * defringeAmount;
+                finalG = srcG * (1 - defringeAmount) + luminance * defringeAmount;
+                finalB = srcB * (1 - defringeAmount) + luminance * defringeAmount;
+            }
+            
+            outputBuffer[idx]     = finalR;
+            outputBuffer[idx + 1] = finalG;
+            outputBuffer[idx + 2] = finalB;
             // Apply calculated alpha to the alpha channel
             outputBuffer[idx + 3] = alpha * 255; 
         }

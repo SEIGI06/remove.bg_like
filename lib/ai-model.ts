@@ -11,8 +11,9 @@ We explicitly set it to /tmp to be safe in serverless.
 */
 // env.cacheDir = '/tmp/.cache'; // Uncomment if needed, but default often works with a read-only FS if it downloads to memory or temp.
 
-const MODEL_ID = 'onnx-community/BiRefNet-ONNX';  
-// NOTE: If 'briaai/RMBG-1.4' is not found in ONNX format, consider using 'Xenova/bria-rmbg-1.4' or 'Xenova/modnet'.
+const MODEL_ID = 'briaai/RMBG-2.0';  
+// RMBG-2.0 offers 90.14% accuracy with improved BiRefNet architecture
+// If RMBG-2.0 fails due to onnxruntime-web compatibility issues, fallback to 'briaai/RMBG-1.4'
 
 // Global declarations to prevent reloading in development/hot-reload
 declare global {
@@ -51,9 +52,6 @@ class AIModel {
     // We use AutoModel.from_pretrained with the specific revision if needed.
     this.model = await AutoModel.from_pretrained(MODEL_ID, {
         // quantize: true, // Optional: for smaller binary size
-        // BiRefNet-ONNX only has 'model.onnx' (fp32) or 'fp16'.
-        // We must explicitly disable quantized loading to find the file.
-        quantized: false, 
     });
     
     this.processor = await AutoProcessor.from_pretrained(MODEL_ID);
