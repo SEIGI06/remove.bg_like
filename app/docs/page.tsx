@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Key, Send, AlertTriangle, Code2, Coins, Gauge, Copy, Check, ChevronRight, ArrowLeft, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,37 @@ const NAV_ITEMS = [
 
 export default function DocsPage() {
     const [activeSection, setActiveSection] = useState('auth');
+
+    useEffect(() => {
+        const sectionIds = NAV_ITEMS.map((item) => item.id);
+        const observers: IntersectionObserver[] = [];
+
+        sectionIds.forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            setActiveSection(id);
+                        }
+                    });
+                },
+                {
+                    rootMargin: '-80px 0px -60% 0px',
+                    threshold: 0,
+                }
+            );
+
+            observer.observe(el);
+            observers.push(observer);
+        });
+
+        return () => {
+            observers.forEach((o) => o.disconnect());
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
