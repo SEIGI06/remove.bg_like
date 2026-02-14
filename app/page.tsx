@@ -6,9 +6,10 @@ import { Loader2, Upload, Download, ImageIcon, LayoutDashboard, LogIn, ChevronDo
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 export default function Home() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [processedUrl, setProcessedUrl] = useState<string | null>(null);
@@ -166,9 +167,9 @@ export default function Home() {
         // Refresh credits after successful processing
         if (session?.user?.id) fetchCredits(session.user.id);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
         setLoading(false);
     }
