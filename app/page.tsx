@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
-import { Loader2, Upload, Download, ImageIcon, LayoutDashboard, LogIn } from 'lucide-react';
+import { Loader2, Upload, Download, ImageIcon, LayoutDashboard, LogIn, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +17,13 @@ export default function Home() {
   
   // New State for Background Color
   const [bgColor, setBgColor] = useState<string>('transparent');
+  const [downloadFormat, setDownloadFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
+
+  const FORMAT_OPTIONS = [
+    { label: 'PNG', value: 'png' as const, mime: 'image/png', ext: 'png' },
+    { label: 'JPEG', value: 'jpeg' as const, mime: 'image/jpeg', ext: 'jpg' },
+    { label: 'WebP', value: 'webp' as const, mime: 'image/webp', ext: 'webp' },
+  ];
 
   const BACKGROUND_OPTIONS = [
     { name: 'Transparent', value: 'transparent', class: 'checkerboard-bg' },
@@ -103,18 +110,21 @@ export default function Home() {
     e.preventDefault();
     if (!processedUrl) return;
 
-    if (bgColor === 'transparent') {
-        // Simple download for transparent
+    const fmt = FORMAT_OPTIONS.find(f => f.value === downloadFormat) || FORMAT_OPTIONS[0];
+    const needsCanvas = bgColor !== 'transparent' || downloadFormat !== 'png';
+
+    if (!needsCanvas) {
+        // Direct download for transparent PNG (original processed output)
         const a = document.createElement('a');
         a.href = processedUrl;
-        a.download = `openremover-result-${Date.now()}.png`;
+        a.download = `openremover-result-${Date.now()}.${fmt.ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         return;
     }
 
-    // Composite with background color
+    // Use canvas to convert format and/or composite background
     try {
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -127,14 +137,17 @@ export default function Home() {
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error("No canvas context");
 
-        // 1. Fill Background
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Fill background: use selected color, or white for JPEG (no transparency)
+        if (bgColor !== 'transparent' || downloadFormat === 'jpeg') {
+            ctx.fillStyle = bgColor !== 'transparent' ? bgColor : '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
-        // 2. Draw Image
+        // Draw processed image on top
         ctx.drawImage(img, 0, 0);
 
-        // 3. Download
+        // Export as selected format
+        const quality = downloadFormat === 'png' ? undefined : 0.92;
         canvas.toBlob((blob) => {
             if (!blob) {
                 setError('Failed to generate download. Please try again.');
@@ -143,12 +156,12 @@ export default function Home() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `openremover-result-bg-${Date.now()}.png`;
+            a.download = `openremover-result-${Date.now()}.${fmt.ext}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        }, 'image/png');
+        }, fmt.mime, quality);
 
     } catch (err) {
         console.error("Download failed:", err);
@@ -328,12 +341,28 @@ export default function Home() {
                                         />
                                     }
                                 />
-                                <button 
-                                    onClick={handleDownload}
-                                    className="absolute bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-full font-bold shadow-xl hover:bg-blue-600 transition-all hover:scale-105 flex items-center gap-2 z-10 group"
-                                >
-                                    Download <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" /> 
-                                </button>
+                                <div className="absolute bottom-6 right-6 flex items-center gap-2 z-10">
+                                    {/* Format selector */}
+                                    <div className="relative">
+                                        <select
+                                            value={downloadFormat}
+                                            onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'jpeg' | 'webp')}
+                                            className="appearance-none bg-white/90 backdrop-blur-sm text-slate-900 pl-3 pr-8 py-3 rounded-full font-bold shadow-xl border border-slate-200 cursor-pointer hover:bg-white transition-all text-sm"
+                                        >
+                                            <option value="png">PNG</option>
+                                            <option value="jpeg">JPEG</option>
+                                            <option value="webp">WebP</option>
+                                        </select>
+                                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    </div>
+                                    {/* Download button */}
+                                    <button 
+                                        onClick={handleDownload}
+                                        className="bg-slate-900 text-white px-6 py-3 rounded-full font-bold shadow-xl hover:bg-blue-600 transition-all hover:scale-105 flex items-center gap-2 group"
+                                    >
+                                        Download <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ) : (
