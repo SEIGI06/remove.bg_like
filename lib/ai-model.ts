@@ -23,14 +23,18 @@ let MODEL_ID = MODEL_VARIANTS[0]; // Start with RMBG-2.0
 
 // Global declarations to prevent reloading in development/hot-reload
 declare global {
-  var __model: unknown;
-  var __processor: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  var __model: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  var __processor: any;
 }
 
 class AIModel {
   static instance: AIModel;
-  private model: unknown;
-  private processor: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private model: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private processor: any;
 
   private constructor() {}
 
