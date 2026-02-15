@@ -13,10 +13,7 @@ We explicitly set it to /tmp to be safe in serverless.
 
 // Try multiple RMBG-2.0 variants in order of preference
 const MODEL_VARIANTS = [
-    'briaai/RMBG-2.0',           // Official RMBG-2.0 (may have auth issues)
-    'Xenova/RMBG-2.0',           // Xenova conversion (if exists)
-    'onnx-community/RMBG-2.0',   // ONNX community conversion
-    'briaai/RMBG-1.4',           // Guaranteed fallback (works)
+    'briaai/RMBG-1.4',           // Standard, reliable model
 ];
 
 let MODEL_ID = MODEL_VARIANTS[0]; // Start with RMBG-2.0
@@ -101,10 +98,6 @@ class AIModel {
   public getProcessor() {
     return this.processor;
   }
-
-  public getModelId() {
-    return MODEL_ID;
-  }
 }
 
 // Helper function exported for ease of use
@@ -114,10 +107,4 @@ export async function getModel() {
         model: instance.getModel(),
         processor: instance.getProcessor()
     };
-}
-
-// DEBUG: Temporary function to check which model is loaded
-export async function getModelInfo() {
-    const instance = await AIModel.getInstance();
-    return instance.getModelId();
 }

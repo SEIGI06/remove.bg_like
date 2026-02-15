@@ -17,7 +17,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
-  const [modelInfo, setModelInfo] = useState<string | null>(null);
   
   // New State for Background Color
   const [bgColor, setBgColor] = useState<string>('transparent');
@@ -141,7 +140,6 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setProcessedUrl(null); // Clear previous result immediately
-    setModelInfo(null);
 
     try {
         const formData = new FormData();
@@ -165,10 +163,6 @@ export default function Home() {
         
         const url = URL.createObjectURL(blob);
         setProcessedUrl(url);
-        
-        // Capture model info if present
-        const modelUsed = res.headers.get('X-Model-Used');
-        if (modelUsed) setModelInfo(modelUsed);
 
         // Refresh credits after successful processing
         if (session?.user?.id) fetchCredits(session.user.id);
@@ -482,12 +476,6 @@ export default function Home() {
                                 </div>
                             </div>
                             
-                            {/* Debug Info */}
-                            {modelInfo && (
-                                <div className="text-center text-xs text-slate-400 font-mono mt-2">
-                                    Model: {modelInfo}
-                                </div>
-                            )}
                         </div>
                     ) : (
                         <div className="relative shadow-2xl rounded-2xl bg-white/50 backdrop-blur-xl z-10 p-2 ring-1 ring-white/50">
