@@ -78,8 +78,8 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
             const idx = y * width + x;
             const currentVal = maskData[idx];
             
-            // Only apply blur to edge pixels (50-250 range), preserve solid areas
-            if (currentVal > 50 && currentVal < 250) {
+            // Only apply blur to edge pixels (20-250 range), preserve solid areas
+            if (currentVal > 20 && currentVal < 250) {
                 let sum = 0;
                 let weightSum = 0;
                 
@@ -138,7 +138,84 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
         }
     }
     
+    // Step 3: Morphological opening — dilate after erosion to restore edges
+    const openedMask = new Uint8Array(maskData.length);
+    
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            const val = erodedMask[idx];
+            
+            if (val > 0) {
+                // Take max of 4-connected neighbors (dilation)
+                const up    = (y > 0) ? erodedMask[idx - width] : 0;
+                const down  = (y < height - 1) ? erodedMask[idx + width] : 0;
+                const left  = (x > 0) ? erodedMask[idx - 1] : 0;
+                const right = (x < width - 1) ? erodedMask[idx + 1] : 0;
+                
+                openedMask[idx] = Math.max(val, up, down, left, right);
+            } else {
+                openedMask[idx] = 0;
+            }
+        }
+    }
+    
+    // Step 4: Connected-component filter — remove small isolated regions (< 50 pixels)
+    const MIN_REGION_SIZE = 50;
+    const visited = new Uint8Array(maskData.length);
+    const regionMap = new Int32Array(maskData.length).fill(-1);
+    const regionSizes: number[] = [];
+    let regionId = 0;
+    
+    // BFS to find connected regions
+    for (let i = 0; i < width * height; i++) {
+        if (openedMask[i] > 30 && !visited[i]) {
+            // Start BFS for this region
+            const queue: number[] = [i];
+            const regionPixels: number[] = [];
+            visited[i] = 1;
+            
+            while (queue.length > 0) {
+                const px = queue.shift()!;
+                regionPixels.push(px);
+                regionMap[px] = regionId;
+                
+                const x = px % width;
+                const y = Math.floor(px / width);
+                
+                // Check 8-connected neighbors
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                            const nIdx = ny * width + nx;
+                            if (openedMask[nIdx] > 30 && !visited[nIdx]) {
+                                visited[nIdx] = 1;
+                                queue.push(nIdx);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            regionSizes.push(regionPixels.length);
+            regionId++;
+        }
+    }
+    
+    // Zero out small regions
+    const finalMask = new Uint8Array(openedMask);
+    for (let i = 0; i < width * height; i++) {
+        const rid = regionMap[i];
+        if (rid >= 0 && regionSizes[rid] < MIN_REGION_SIZE) {
+            finalMask[i] = 0;
+        }
+    }
+    
     console.timeEnd('Mask Refinement');
+    console.log(`Region filter: ${regionId} regions found, removed ${regionSizes.filter(s => s < MIN_REGION_SIZE).length} small regions`);
     
     // Parse background color if provided
     let bgR = 255, bgG = 255, bgB = 255;
@@ -159,14 +236,14 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
     const sourceData = jimpImage.bitmap.data;
 
     // Threshold to remove low-confidence noise (0-255)
-    // Increased to 100 to ensure background noise is cleanly removed, 
-    // while keeping edges (100-255) soft.
-    const THRESHOLD = 100; 
+    // Set to 128 for aggressive noise cleanup on industrial/dark objects
+    // Pixels with mask < 128 are treated as background
+    const THRESHOLD = 128; 
 
     for (let i = 0; i < width * height; i++) {
         const idx = i * 4;     // RGBA index
         // Use ERODED mask instead of raw mask
-        const maskVal = erodedMask[i]; 
+        const maskVal = finalMask[i]; 
         
         // Copy RGB from source
         const srcR = sourceData[idx];
@@ -199,7 +276,7 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
                     const ny = y + dy;
                     if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                         const nIdx = ny * width + nx;
-                        const nMaskVal = erodedMask[nIdx];
+                        const nMaskVal = finalMask[nIdx];
                         const nPixIdx = nIdx * 4;
                         
                         if (nMaskVal > 200) {
