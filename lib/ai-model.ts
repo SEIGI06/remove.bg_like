@@ -13,8 +13,7 @@ We explicitly set it to /tmp to be safe in serverless.
 
 // Try multiple RMBG-2.0 variants in order of preference
 const MODEL_VARIANTS = [
-    'briaai/RMBG-1.4',           // Standard, reliable model (Primary)
-    'Xenova/modnet',             // Fallback for portraits
+    'briaai/RMBG-1.4',           // Standard, reliable model
 ];
 
 let MODEL_ID = MODEL_VARIANTS[0]; // Start with RMBG-2.0
