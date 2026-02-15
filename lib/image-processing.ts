@@ -160,8 +160,77 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
         }
     }
     
-    // Step 4: Connected-component filter — remove noise regions
-    // Use proportional filtering: remove any region smaller than 0.1% of total pixels
+    // Step 4: Edge flood-fill — mark all pixels reachable from borders through
+    // low-mask pixels as definite background. This catches noise that is
+    // connected to the edge but not to the main subject.
+    const FLOOD_THRESHOLD = 160; // Pixels with mask below this are traversable
+    const isBackground = new Uint8Array(maskData.length); // 1 = definite background
+    const floodQueue: number[] = [];
+    
+    // Seed from all 4 borders
+    for (let x = 0; x < width; x++) {
+        // Top row
+        const topIdx = x;
+        if (openedMask[topIdx] < FLOOD_THRESHOLD && !isBackground[topIdx]) {
+            isBackground[topIdx] = 1;
+            floodQueue.push(topIdx);
+        }
+        // Bottom row
+        const botIdx = (height - 1) * width + x;
+        if (openedMask[botIdx] < FLOOD_THRESHOLD && !isBackground[botIdx]) {
+            isBackground[botIdx] = 1;
+            floodQueue.push(botIdx);
+        }
+    }
+    for (let y = 0; y < height; y++) {
+        // Left column
+        const leftIdx = y * width;
+        if (openedMask[leftIdx] < FLOOD_THRESHOLD && !isBackground[leftIdx]) {
+            isBackground[leftIdx] = 1;
+            floodQueue.push(leftIdx);
+        }
+        // Right column
+        const rightIdx = y * width + (width - 1);
+        if (openedMask[rightIdx] < FLOOD_THRESHOLD && !isBackground[rightIdx]) {
+            isBackground[rightIdx] = 1;
+            floodQueue.push(rightIdx);
+        }
+    }
+    
+    // BFS flood fill from borders
+    while (floodQueue.length > 0) {
+        const px = floodQueue.shift()!;
+        const x = px % width;
+        const y = Math.floor(px / width);
+        
+        // Check 8-connected neighbors
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                    const nIdx = ny * width + nx;
+                    if (!isBackground[nIdx] && openedMask[nIdx] < FLOOD_THRESHOLD) {
+                        isBackground[nIdx] = 1;
+                        floodQueue.push(nIdx);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Apply: zero out all background pixels
+    const finalMask = new Uint8Array(openedMask);
+    let bgCount = 0;
+    for (let i = 0; i < width * height; i++) {
+        if (isBackground[i]) {
+            finalMask[i] = 0;
+            bgCount++;
+        }
+    }
+    
+    // Step 5: Additional small-region cleanup on remaining foreground
     const totalPixels = width * height;
     const MIN_REGION_SIZE = Math.max(200, Math.floor(totalPixels * 0.001));
     const visited = new Uint8Array(maskData.length);
@@ -169,23 +238,20 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
     const regionSizes: number[] = [];
     let regionId = 0;
     
-    // BFS to find connected regions
     for (let i = 0; i < width * height; i++) {
-        if (openedMask[i] > 30 && !visited[i]) {
-            // Start BFS for this region
+        if (finalMask[i] > 30 && !visited[i]) {
             const queue: number[] = [i];
-            const regionPixels: number[] = [];
             visited[i] = 1;
+            let size = 0;
             
             while (queue.length > 0) {
                 const px = queue.shift()!;
-                regionPixels.push(px);
                 regionMap[px] = regionId;
+                size++;
                 
                 const x = px % width;
                 const y = Math.floor(px / width);
                 
-                // Check 8-connected neighbors
                 for (let dy = -1; dy <= 1; dy++) {
                     for (let dx = -1; dx <= 1; dx++) {
                         if (dx === 0 && dy === 0) continue;
@@ -193,7 +259,7 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
                         const ny = y + dy;
                         if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                             const nIdx = ny * width + nx;
-                            if (openedMask[nIdx] > 30 && !visited[nIdx]) {
+                            if (finalMask[nIdx] > 30 && !visited[nIdx]) {
                                 visited[nIdx] = 1;
                                 queue.push(nIdx);
                             }
@@ -202,30 +268,24 @@ export async function removeBackground(imageBuffer: Buffer, bgColor?: string): P
                 }
             }
             
-            regionSizes.push(regionPixels.length);
+            regionSizes.push(size);
             regionId++;
         }
     }
     
-    // Find the largest region size
     const maxRegionSize = regionSizes.length > 0 ? Math.max(...regionSizes) : 0;
-    // Also remove regions that are less than 1% of the largest region
-    const proportionalMin = Math.floor(maxRegionSize * 0.01);
-    const effectiveMin = Math.max(MIN_REGION_SIZE, proportionalMin);
+    const effectiveMin = Math.max(MIN_REGION_SIZE, Math.floor(maxRegionSize * 0.01));
     
-    // Zero out small regions
-    const finalMask = new Uint8Array(openedMask);
-    let removedCount = 0;
     for (let i = 0; i < width * height; i++) {
         const rid = regionMap[i];
         if (rid >= 0 && regionSizes[rid] < effectiveMin) {
             finalMask[i] = 0;
-            removedCount++;
         }
     }
     
     console.timeEnd('Mask Refinement');
-    console.log(`Region filter: ${regionId} regions, largest=${maxRegionSize}px, threshold=${effectiveMin}px, removed ${regionSizes.filter(s => s < effectiveMin).length} noise regions (${removedCount}px)`);
+    console.log(`Edge flood-fill: ${bgCount}px marked as background. Region filter: ${regionId} regions, largest=${maxRegionSize}px, min=${effectiveMin}px`);
+
 
     
     // Parse background color if provided
