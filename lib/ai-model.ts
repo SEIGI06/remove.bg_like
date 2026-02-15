@@ -13,7 +13,8 @@ We explicitly set it to /tmp to be safe in serverless.
 
 // Try multiple RMBG-2.0 variants in order of preference
 const MODEL_VARIANTS = [
-    'briaai/RMBG-1.4',           // Standard, reliable model
+    'onnx-community/BiRefNet-general-epoch_244', // SOTA BiRefNet (General)
+    'briaai/RMBG-1.4',           // Standard, reliable fallback
 ];
 
 let MODEL_ID = MODEL_VARIANTS[0]; // Start with RMBG-2.0
@@ -98,6 +99,10 @@ class AIModel {
   public getProcessor() {
     return this.processor;
   }
+
+  public getModelId() {
+    return MODEL_ID;
+  }
 }
 
 // Helper function exported for ease of use
@@ -107,4 +112,10 @@ export async function getModel() {
         model: instance.getModel(),
         processor: instance.getProcessor()
     };
+}
+
+// DEBUG: Temporary function to check which model is loaded
+export async function getModelInfo() {
+    const instance = await AIModel.getInstance();
+    return instance.getModelId();
 }
