@@ -214,9 +214,12 @@ export default function Home() {
     try {
         const formData = new FormData();
         if (file) formData.append('image', file);
-        if (bgColor !== 'transparent') {
-             formData.append('bg_color', bgColor === 'custom' ? customColor : bgColor);
-        }
+        
+        // We do NOT send bg_color to the server anymore.
+        // We always want a transparent PNG back so we can change backgrounds instantly on the client.
+        // if (bgColor !== 'transparent') {
+        //      formData.append('bg_color', bgColor === 'custom' ? customColor : bgColor);
+        // }
         
         // Send manual removal params if enabled
         if (useRemoveColor) {
@@ -434,7 +437,7 @@ export default function Home() {
                             <span className="text-xs font-mono text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
                         </div>
 
-  // ... existing code ...
+
 
                         {/* --- Magic Color Remover --- */}
                         <div className="space-y-3 pt-4 border-t border-slate-200/60 mb-4">
