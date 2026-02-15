@@ -153,7 +153,7 @@ export default function Home() {
 
     try {
         const formData = new FormData();
-        if (file) formData.append('file', file);
+        if (file) formData.append('image', file);
         if (bgColor !== 'transparent') {
              formData.append('bg_color', bgColor === 'custom' ? customColor : bgColor);
         }
