@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { removeBackground } from '@/lib/image-processing';
+import { getModelInfo } from '@/lib/ai-model';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const maxDuration = 60; // Set max duration for Vercel Function (standard pro is 60s, hobby 10s might timeout on cold start)
@@ -91,11 +92,15 @@ export async function POST(req: NextRequest) {
 
         const processedImageBuffer = await removeBackground(buffer, bgColor || undefined);
 
+        // DEBUG: Get model info for response header
+        const modelId = await getModelInfo();
+
         // 4. Return Result (credit already deducted atomically above)
         return new NextResponse(processedImageBuffer as unknown as BodyInit, {
             headers: {
                 'Content-Type': 'image/png',
                 'Content-Disposition': 'inline; filename="removed-bg.png"',
+                'X-Model-Used': modelId,  // DEBUG: Temporary - shows which model is loaded
             },
         });
 

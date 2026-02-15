@@ -101,6 +101,10 @@ class AIModel {
   public getProcessor() {
     return this.processor;
   }
+
+  public getModelId() {
+    return MODEL_ID;
+  }
 }
 
 // Helper function exported for ease of use
@@ -110,4 +114,10 @@ export async function getModel() {
         model: instance.getModel(),
         processor: instance.getProcessor()
     };
+}
+
+// DEBUG: Temporary function to check which model is loaded
+export async function getModelInfo() {
+    const instance = await AIModel.getInstance();
+    return instance.getModelId();
 }
