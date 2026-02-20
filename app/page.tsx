@@ -344,31 +344,31 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Header */}
-      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-        <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <div className="w-5 h-5 bg-white rounded-full opacity-50" />
+      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+        <Link href="/" className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
+                <div className="w-4 h-4 bg-white rounded-full opacity-50" />
             </div>
-            <span className="font-extrabold text-2xl tracking-tight text-slate-900">OpenRemover</span>
+            <span className="font-extrabold text-xl tracking-tight text-slate-900">OpenRemover</span>
         </Link>
-        <div className="flex items-center gap-4">
-            <Link href="/docs" className="text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors px-3 py-2 rounded-lg hover:bg-blue-50">
+        <div className="flex items-center gap-3">
+            <Link href="/docs" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors px-3 py-2 rounded-lg hover:bg-slate-100">
                 API Docs
             </Link>
             {session ? (
                 <>
                     {credits !== null && (
-                        <div className="flex items-center gap-1.5 text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg" title="Remaining credits">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg" title="Remaining credits">
                             <Coins className="w-4 h-4 text-amber-500" />
                             <span className={cn(credits <= 2 ? 'text-red-500' : 'text-slate-700')}>{credits}</span>
                         </div>
                     )}
-                    <Link href="/dashboard" className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors bg-slate-100 hover:bg-blue-50 px-4 py-2 rounded-lg">
+                    <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm">
                         <LayoutDashboard className="w-4 h-4" /> Dashboard
                     </Link>
                 </>
             ) : (
-                <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg shadow-lg shadow-blue-500/20 transition-all hover:scale-105">
+                <Link href="/login" className="flex items-center gap-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2.5 rounded-lg shadow-sm transition-colors">
                     <LogIn className="w-4 h-4" /> Login
                 </Link>
             )}
