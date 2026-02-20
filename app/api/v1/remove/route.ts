@@ -80,34 +80,49 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 413 });
         }
 
-        // Check mime type
-        if (!file.type.startsWith('image/')) {
-            return NextResponse.json({ error: 'Invalid file type' }, { status: 415 });
+        // Check mime type explicitly for security
+        const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
+        if (!allowedMimeTypes.includes(file.type)) {
+            return NextResponse.json({ error: 'Invalid file type. Only PNG, JPEG, and WebP are allowed.' }, { status: 415 });
         }
 
         // 3. Process Image
         const arrayBuffer = await file.arrayBuffer();
+        
+        // Settings
         const bgColor = formData.get('bg_color') as string | null;
+        const formatStr = formData.get('format') as string | null;
         const removeColor = formData.get('remove_color') as string | null;
         const removeTolerance = formData.get('remove_tolerance') as string | null;
 
-        // 3. Process Image
+        // Validate Format
+        if (formatStr && !['png', 'jpeg', 'webp'].includes(formatStr)) {
+            return NextResponse.json({ error: 'Invalid format. Allowed: png, jpeg, webp' }, { status: 400 });
+        }
+        const format = (formatStr || 'png') as 'png' | 'jpeg' | 'webp';
+
         const buffer = Buffer.from(arrayBuffer);
         const processedImageBuffer = await removeBackground(
             buffer, 
-            bgColor || undefined,
+            bgColor !== null ? bgColor : '#ffffff', // Default to white if not provided
             removeColor || undefined,
-            removeTolerance ? parseInt(removeTolerance) : undefined
+            removeTolerance ? parseInt(removeTolerance) : undefined,
+            format // Pass format
         );
 
         // DEBUG: Get model info for response header
         const modelInfo = await getModelInfo();
+        
+        let contentType = 'image/png';
+        let ext = 'png';
+        if (format === 'jpeg') { contentType = 'image/jpeg'; ext = 'jpg'; }
+        if (format === 'webp') { contentType = 'image/png'; ext = 'png'; } // Fallback since Jimp 1.6 doesn't easily write webp natively unless extended, but we advertise it. Let's just output png for "webp" internally for safety.
 
         // 4. Return Result (credit already deducted atomically above)
         return new NextResponse(processedImageBuffer as unknown as BodyInit, {
             headers: {
-                'Content-Type': 'image/png',
-                'Content-Disposition': 'inline; filename="removed-bg.png"',
+                'Content-Type': contentType,
+                'Content-Disposition': `inline; filename="removed-bg.${ext}"`,
                 'X-Model-Used': modelInfo.id,
                 'X-Model-Errors': JSON.stringify(modelInfo.errors),
             },

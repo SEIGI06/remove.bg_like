@@ -11,12 +11,12 @@ We explicitly set it to /tmp to be safe in serverless.
 */
 // env.cacheDir = '/tmp/.cache'; // Uncomment if needed, but default often works with a read-only FS if it downloads to memory or temp.
 
-// Try multiple RMBG-2.0 variants in order of preference
+// Use reliable RMBG-1.4 model
 const MODEL_VARIANTS = [
     'briaai/RMBG-1.4',           // Standard, reliable model
 ];
 
-let MODEL_ID = MODEL_VARIANTS[0]; // Start with RMBG-2.0
+let MODEL_ID = MODEL_VARIANTS[0]; // Active model ID
 
 // Global declarations to prevent reloading in development/hot-reload
 declare global {

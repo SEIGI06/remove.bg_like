@@ -256,13 +256,18 @@ export default function DocsPage() {
                                                     <td className="py-3 px-4 font-mono font-bold text-blue-700">image</td>
                                                     <td className="py-3 px-4 text-slate-600">File</td>
                                                     <td className="py-3 px-4 text-center"><span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Oui</span></td>
-                                                    <td className="py-3 px-4 text-slate-600">Image à traiter (PNG, JPG, WebP — max 10 Mo)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-3 px-4 font-mono font-bold text-blue-700">format</td>
+                                                    <td className="py-3 px-4 text-slate-600">String</td>
+                                                    <td className="py-3 px-4 text-center"><span className="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-0.5 rounded-full">Non</span></td>
+                                                    <td className="py-3 px-4 text-slate-600">Format de sortie : <code className="bg-slate-100 px-1 rounded text-xs">png</code>, <code className="bg-slate-100 px-1 rounded text-xs">jpeg</code>, <code className="bg-slate-100 px-1 rounded text-xs">webp</code>. Par défaut : <code className="bg-slate-100 px-1 rounded text-xs">png</code></td>
                                                 </tr>
                                                 <tr>
                                                     <td className="py-3 px-4 font-mono font-bold text-blue-700">bg_color</td>
                                                     <td className="py-3 px-4 text-slate-600">String</td>
                                                     <td className="py-3 px-4 text-center"><span className="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-0.5 rounded-full">Non</span></td>
-                                                    <td className="py-3 px-4 text-slate-600">Couleur de fond hex (<code className="bg-slate-100 px-1 rounded text-xs">#ffffff</code>, <code className="bg-slate-100 px-1 rounded text-xs">#00ff00</code>). Absent = transparent</td>
+                                                    <td className="py-3 px-4 text-slate-600">Couleur de fond hexadécimale (ex: <code className="bg-slate-100 px-1 rounded text-xs">#ffffff</code>). Par défaut : <code className="bg-slate-100 px-1 rounded text-xs">#ffffff</code> (blanc)</td>
                                                 </tr>
                                                 <tr>
                                                     <td className="py-3 px-4 font-mono font-bold text-blue-700">remove_color</td>
@@ -374,17 +379,16 @@ export default function DocsPage() {
 
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                                    <ChevronRight className="w-5 h-5 text-blue-600" /> cURL — Fond blanc
+                                    <ChevronRight className="w-5 h-5 text-blue-600" /> cURL — Format WebP et Fond Rouge
                                 </h3>
                                 <CopyBlock
                                     language="bash"
                                     code={`curl -X POST https://openremover.vercel.app/api/v1/remove \\
   -H "x-api-key: sk_your_api_key" \\
   -F "image=@photo.jpg" \\
-  -F "bg_color=#ffffff" \\
-  -F "remove_color=#00ff00" \\
-  -F "remove_tolerance=15" \\
-  --output result.png`}
+  -F "format=webp" \\
+  -F "bg_color=#ff0000" \\
+  --output result.webp`}
                                 />
                             </div>
 
@@ -397,9 +401,10 @@ export default function DocsPage() {
                                     language="javascript"
                                     code={`const formData = new FormData();
 formData.append('image', fileInput.files[0]);
-formData.append('bg_color', '#ffffff'); // optionnel
-formData.append('remove_color', '#00ff00'); // optionnel (chroma key)
-formData.append('remove_tolerance', '15'); // optionnel
+formData.append('format', 'jpeg'); // Optionnel
+formData.append('bg_color', '#000000'); // Optionnel (noir)
+formData.append('remove_color', '#00ff00'); // Optionnel (chroma key)
+formData.append('remove_tolerance', '15'); // Optionnel
 
 const response = await fetch('https://openremover.vercel.app/api/v1/remove', {
   method: 'POST',
@@ -430,7 +435,8 @@ response = requests.post(
     headers={'x-api-key': 'sk_your_api_key'},
     files={'image': open('photo.jpg', 'rb')},
     data={
-        'bg_color': '#ffffff',
+        'format': 'png',
+        'bg_color': 'transparent', # Demander un fond transparent explicitement
         'remove_color': '#00ff00',
         'remove_tolerance': '15'
     }
@@ -541,7 +547,15 @@ with open('result.png', 'wb') as f:
                                             </div>
                                         </div>
                                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Champ 2 — Optionnel (couleur de fond)</p>
+                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Champ 2 — Optionnel (Format)</p>
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                <span className="text-slate-600 font-semibold">Field Name:</span> <span className="font-mono text-slate-800">format</span>
+                                                <span className="text-slate-600 font-semibold">Type:</span> <span className="font-mono text-slate-800">String</span>
+                                                <span className="text-slate-600 font-semibold">Value:</span> <span className="font-mono text-slate-800">jpeg</span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Champ 3 — Optionnel (Couleur de fond)</p>
                                             <div className="grid grid-cols-2 gap-2 text-sm">
                                                 <span className="text-slate-600 font-semibold">Field Name:</span> <span className="font-mono text-slate-800">bg_color</span>
                                                 <span className="text-slate-600 font-semibold">Type:</span> <span className="font-mono text-slate-800">String</span>

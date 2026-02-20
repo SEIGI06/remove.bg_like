@@ -138,6 +138,12 @@ export default function Home() {
     setError(null);
     setBgColor('transparent');
     setDownloadFormat('png');
+    // Reset Manual Color Removal (Chroma Key) modifiers
+    setUseRemoveColor(false);
+    setRemoveColor('#000000');
+    setRemoveTolerance(10);
+    setIsPickingColor(false);
+    
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }

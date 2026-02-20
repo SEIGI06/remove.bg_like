@@ -1,6 +1,6 @@
 import { getModel } from './ai-model';
 import { RawImage } from '@xenova/transformers';
-import { Jimp } from 'jimp';
+import Jimp from 'jimp';
 import { PNG } from 'pngjs';
 
 /**
@@ -37,9 +37,10 @@ function generateGaussianKernel(size: number, sigma: number): number[][] {
  */
 export async function removeBackground(
     imageBuffer: Buffer, 
-    bgColor?: string,
+    bgColor: string = '#ffffff', // Default to white
     removeColor?: string, 
-    removeTolerance: number = 10
+    removeTolerance: number = 10,
+    format: 'png' | 'jpeg' | 'webp' = 'png'
 ): Promise<Buffer> {
     const { model, processor } = await getModel();
     console.log('Start processing...');
@@ -300,11 +301,11 @@ export async function removeBackground(
 
 
     
-    // Parse background color if provided
+    // Parse background color
     let bgR = 255, bgG = 255, bgB = 255;
-    const hasBgColor = !!bgColor;
+    const hasBgColor = bgColor !== 'transparent';
     
-    if (hasBgColor && bgColor) {
+    if (hasBgColor) {
         // Simple hex parser #RRGGBB or RRGGBB
         const hex = bgColor.replace('#', '');
         if (hex.length === 6) {
@@ -312,6 +313,11 @@ export async function removeBackground(
             bgG = parseInt(hex.substring(2, 4), 16);
             bgB = parseInt(hex.substring(4, 6), 16);
         }
+    }
+    
+    // Default to white for JPEG if transparent was requested
+    if (format === 'jpeg' && !hasBgColor) {
+        bgR = 255; bgG = 255; bgB = 255;
     }
 
     // Parse remove color for Chroma Key
@@ -388,10 +394,10 @@ export async function removeBackground(
             const x = i % width;
             const y = Math.floor(i / width);
             
-            // Sample neighborhood to estimate foreground/background colors
-            let fgSamples = 0, bgSamples = 0;
+            
+            // Sample neighborhood to estimate foreground colors
+            let fgSamples = 0;
             let fgR = 0, fgG = 0, fgB = 0;
-            let bgR_sum = hasBgColor ? bgR : 0, bgG_sum = hasBgColor ? bgG : 0, bgB_sum = hasBgColor ? bgB : 0;
             
             const sampleRadius = 3;
             for (let dy = -sampleRadius; dy <= sampleRadius; dy++) {
@@ -409,12 +415,6 @@ export async function removeBackground(
                             fgG += sourceData[nPixIdx + 1];
                             fgB += sourceData[nPixIdx + 2];
                             fgSamples++;
-                        } else if (nMaskVal < 30 && !hasBgColor) {
-                            // Likely background (only if no custom bg color)
-                            bgR_sum += sourceData[nPixIdx];
-                            bgG_sum += sourceData[nPixIdx + 1];
-                            bgB_sum += sourceData[nPixIdx + 2];
-                            bgSamples++;
                         }
                     }
                 }
@@ -426,32 +426,24 @@ export async function removeBackground(
                 fgB /= fgSamples;
             }
             
-            if (!hasBgColor && bgSamples > 0) {
-                bgR_sum /= bgSamples;
-                bgG_sum /= bgSamples;
-                bgB_sum /= bgSamples;
-            }
-            
-            // Refine alpha using color information
-            // If current pixel is closer to bg color, reduce alpha
+            // Refine alpha using color information lightly without specific target background
             if (fgSamples > 0) {
                 const distToFg = Math.sqrt((srcR - fgR) ** 2 + (srcG - fgG) ** 2 + (srcB - fgB) ** 2);
-                const distToBg = Math.sqrt((srcR - bgR_sum) ** 2 + (srcG - bgG_sum) ** 2 + (srcB - bgB_sum) ** 2);
-                
-                if (distToFg + distToBg > 0) {
-                    const colorAlpha = distToBg / (distToFg + distToBg);
-                    // Blend with original alpha
-                    alpha = alpha * 0.6 + colorAlpha * 0.4;
+                if (distToFg > 50) {
+                    // Pixel color differs significantly from local solid foreground, slightly reduce alpha
+                    alpha *= 0.8;
                 }
             }
         }
 
-        if (hasBgColor) {
+        if (hasBgColor || format === 'jpeg') {
             // IMPROVED BLENDING with Gamma Correction
             // Convert to linear space for proper blending
             const sR_linear = Math.pow(srcR / 255, 2.2);
             const sG_linear = Math.pow(srcG / 255, 2.2);
             const sB_linear = Math.pow(srcB / 255, 2.2);
+            
+            // If JPEG and transparent was requested, we forced bgR,bgG,bgB to white earlier
             const bR_linear = Math.pow(bgR / 255, 2.2);
             const bG_linear = Math.pow(bgG / 255, 2.2);
             const bB_linear = Math.pow(bgB / 255, 2.2);
@@ -468,7 +460,7 @@ export async function removeBackground(
             outputBuffer[idx + 2] = Math.pow(finalB_linear, 1/2.2) * 255;
             outputBuffer[idx + 3] = 255; // Fully Opaque result
         } else {
-            // TRANSPARENT Background with Color Defringing
+            // TRANSPARENT Background Output
             let finalR = srcR;
             let finalG = srcG;
             let finalB = srcB;
@@ -493,18 +485,35 @@ export async function removeBackground(
     }
 
     // 6. Return Buffer
-    console.log('Generating final output buffer...');
+    console.log(`Generating final output buffer (Format: ${format})...`);
     
-    const png = new PNG({
-        width: width,
-        height: height,
-        inputColorType: 6, // RGBA
-        inputHasAlpha: true
-    });
-    
-    png.data = outputBuffer;
-    
-    const resultBuffer = PNG.sync.write(png);
-
-    return resultBuffer;
+    // For PNG we use pngjs, for JPEG/WebP we use Jimp
+    if (format === 'png') {
+        const png = new PNG({
+            width: width,
+            height: height,
+            inputColorType: 6, // RGBA
+            inputHasAlpha: true
+        });
+        
+        png.data = outputBuffer;
+        return PNG.sync.write(png);
+    } else {
+         // Create a new Jimp image from the raw RGBA buffer
+         const outJimp = new Jimp({
+             width,
+             height,
+             data: outputBuffer
+         });
+         
+         const jimpMime = format === 'jpeg' ? Jimp.MIME_JPEG : Jimp.MIME_PNG; 
+         
+         try {
+              const resBuffer = await outJimp.getBufferAsync(jimpMime);
+              return resBuffer;
+         } catch (e) {
+              console.warn("Format error, defaulting to PNG via Jimp", e);
+              return await outJimp.getBufferAsync(Jimp.MIME_PNG);
+         }
+    }
 }
