@@ -605,7 +605,7 @@ export default function Home() {
                                 </div>
                                 <button 
                                     onClick={handleDownload}
-                                    className="flex-[2] bg-blue-600 text-white px-4 py-3 rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                                    className="flex-2 bg-blue-600 text-white px-4 py-3 rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 group"
                                 >
                                     Download <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
                                 </button>
@@ -679,6 +679,7 @@ export default function Home() {
                     ) : (
                         <div className="relative w-full h-full flex items-center justify-center">
                             <div className="relative shadow-2xl rounded-2xl bg-white/50 backdrop-blur-xl z-20 p-2 ring-1 ring-white/50 inline-block max-w-full max-h-full">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={originalUrl} alt="Preview" className="max-w-full max-h-[600px] object-contain rounded-xl" />
                             </div>
 

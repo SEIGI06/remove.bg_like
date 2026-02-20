@@ -4,10 +4,11 @@ import ApiKeyManager from '@/components/profile/api-key-manager';
 import Link from 'next/link';
 import { LogOut, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { cn } from '@/lib/utils'; // Assuming this exists based on page.tsx
 
 export default function ProfilePage() {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const [credits, setCredits] = useState<number | null>(null);
     const [showCreditModal, setShowCreditModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'account' | 'api'>('account');
