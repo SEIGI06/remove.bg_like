@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import ApiKeyManager from '@/components/dashboard/api-key-manager';
+import ApiKeyManager from '@/components/profile/api-key-manager';
 import Link from 'next/link';
 import { LogOut, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
