@@ -225,11 +225,10 @@ export default function Home() {
         const formData = new FormData();
         if (file) formData.append('image', file);
         
-        // We do NOT send bg_color to the server anymore.
-        // We always want a transparent PNG back so we can change backgrounds instantly on the client.
-        // if (bgColor !== 'transparent') {
-        //      formData.append('bg_color', bgColor === 'custom' ? customColor : bgColor);
-        // }
+        // Always request transparent background from the API so we can composite it locally on the client
+        formData.append('bg_color', 'transparent');
+        // Force PNG format from the API to preserve the alpha channel for client-side background changes
+        formData.append('format', 'png');
         
         // Send manual removal params if enabled
         if (useRemoveColor) {
@@ -553,48 +552,76 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* Background Color Controls */}
+                {/* Output Controls */}
                 {processedUrl && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-auto">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Background Style</p>
-                        <div className="flex flex-wrap gap-3">
-                            {BACKGROUND_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => setBgColor(opt.value)}
-                                    className={cn(
-                                        "w-10 h-10 rounded-full border-2 border-slate-200 shadow-sm transition-all hover:scale-110 focus:outline-none",
-                                        opt.class,
-                                        bgColor === opt.value && "ring-2 ring-offset-2 ring-blue-600 scale-110 border-transparent shadow-md"
-                                    )}
-                                    title={opt.name}
-                                />
-                            ))}
-                            {/* Native Color Picker */}
-                            <div className={cn(
-                                "relative w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 shadow-sm cursor-pointer hover:scale-110 transition-all",
-                                bgColor !== 'transparent' && !BACKGROUND_OPTIONS.find(o => o.value === bgColor) && "ring-2 ring-offset-2 ring-blue-600 border-white"
-                            )}>
-                                <div className="absolute inset-0 bg-linear-to-tr from-blue-500 via-purple-500 to-orange-500" />
-                                <input 
-                                    type="color" 
-                                    className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 opacity-0 cursor-pointer"
-                                    onChange={(e) => { setBgColor(e.target.value); setCustomColor(e.target.value); }}
-                                    value={customColor}
-                                />
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-auto space-y-6">
+                        {/* Background Color Controls */}
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Background Style</p>
+                            <div className="flex flex-wrap gap-3">
+                                {BACKGROUND_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setBgColor(opt.value)}
+                                        className={cn(
+                                            "w-10 h-10 rounded-full border-2 border-slate-200 shadow-sm transition-all hover:scale-110 focus:outline-none",
+                                            opt.class,
+                                            bgColor === opt.value && "ring-2 ring-offset-2 ring-blue-600 scale-110 border-transparent shadow-md"
+                                        )}
+                                        title={opt.name}
+                                    />
+                                ))}
+                                {/* Native Color Picker */}
+                                <div className={cn(
+                                    "relative w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 shadow-sm cursor-pointer hover:scale-110 transition-all",
+                                    bgColor !== 'transparent' && !BACKGROUND_OPTIONS.find(o => o.value === bgColor) && "ring-2 ring-offset-2 ring-blue-600 border-white"
+                                )}>
+                                    <div className="absolute inset-0 bg-linear-to-tr from-blue-500 via-purple-500 to-orange-500" />
+                                    <input 
+                                        type="color" 
+                                        className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 p-0 opacity-0 cursor-pointer"
+                                        onChange={(e) => { setBgColor(e.target.value); setCustomColor(e.target.value); }}
+                                        value={customColor}
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* Reset button */}
-                {processedUrl && (
-                    <button
-                        onClick={handleReset}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-slate-500 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
-                    >
-                        <RotateCcw className="w-4 h-4" /> New Image
-                    </button>
+                        {/* Export & Download */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200/60">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Export Image</p>
+                            <div className="flex items-center gap-3">
+                                <div className="relative flex-1">
+                                    <select
+                                        value={downloadFormat}
+                                        onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'jpeg' | 'webp')}
+                                        className="w-full appearance-none bg-white text-slate-900 pl-4 pr-10 py-3 rounded-xl font-bold shadow-sm border border-slate-200 cursor-pointer hover:border-blue-300 transition-all text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="png">PNG</option>
+                                        <option value="jpeg">JPEG</option>
+                                        <option value="webp">WebP</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                                <button 
+                                    onClick={handleDownload}
+                                    className="flex-[2] bg-blue-600 text-white px-4 py-3 rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                                >
+                                    Download <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Reset button */}
+                        <div className="pt-2">
+                            <button
+                                onClick={handleReset}
+                                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-slate-500 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                            >
+                                <RotateCcw className="w-4 h-4" /> Start Over
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -633,28 +660,6 @@ export default function Home() {
                                         />
                                     }
                                 />
-                                <div className="absolute bottom-6 right-6 flex items-center gap-2 z-10">
-                                    {/* Format selector */}
-                                    <div className="relative">
-                                        <select
-                                            value={downloadFormat}
-                                            onChange={(e) => setDownloadFormat(e.target.value as 'png' | 'jpeg' | 'webp')}
-                                            className="appearance-none bg-white/90 backdrop-blur-sm text-slate-900 pl-3 pr-8 py-3 rounded-full font-bold shadow-xl border border-slate-200 cursor-pointer hover:bg-white transition-all text-sm"
-                                        >
-                                            <option value="png">PNG</option>
-                                            <option value="jpeg">JPEG</option>
-                                            <option value="webp">WebP</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                                    </div>
-                                    {/* Download button */}
-                                    <button 
-                                        onClick={handleDownload}
-                                        className="bg-slate-900 text-white px-6 py-3 rounded-full font-bold shadow-xl hover:bg-blue-600 transition-all hover:scale-105 flex items-center gap-2 group"
-                                    >
-                                        Download <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                                    </button>
-                                </div>
                             </div>
                             
                             {/* Debug Info */}
