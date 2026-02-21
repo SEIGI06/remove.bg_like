@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import ApiKeyManager from "@/components/profile/api-key-manager";
 import Link from "next/link";
-import { Home, LogOut, User } from "lucide-react";
+import { Home, LogOut, User, Coins } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils"; // Assuming this exists based on page.tsx
@@ -51,12 +51,12 @@ export default function ProfilePage() {
         </Link>
         <div className="flex items-center gap-4">
           {/* Credit Badge in Nav */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm font-bold text-slate-700">
-              {credits !== null ? credits : "..."} Credits
-            </span>
-          </div>
+          {credits !== null && (
+              <div className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg" title="Remaining credits">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <span className={cn(credits <= 2 ? 'text-red-500' : 'text-slate-700')}>{credits}</span>
+              </div>
+          )}
           <Link
             href="/"
             className="text-sm font-semibold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"

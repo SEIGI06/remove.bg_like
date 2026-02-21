@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, Key, Send, AlertTriangle, Code2, Coins, Gauge, Copy, Check, ChevronRight, ArrowLeft, Zap } from 'lucide-react';
+import { BookOpen, Key, Send, AlertTriangle, Code2, Coins, Gauge, Copy, Check, ChevronRight, ArrowLeft, Zap, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Reusable copy button
@@ -121,11 +121,11 @@ export default function DocsPage() {
                     <span className="font-extrabold text-2xl tracking-tight text-slate-900">OpenRemover</span>
                 </Link>
                 <div className="flex items-center gap-3">
-                    <Link href="/" className="text-sm font-bold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
                         <ArrowLeft className="w-4 h-4" /> Back to App
                     </Link>
-                    <Link href="/profile" className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg shadow-lg shadow-blue-500/20 transition-all hover:scale-105">
-                        Profile
+                    <Link href="/profile" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm">
+                        <User className="w-4 h-4" /> Profile
                     </Link>
                 </div>
             </nav>
