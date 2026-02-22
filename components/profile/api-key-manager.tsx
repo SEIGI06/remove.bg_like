@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Plus, Trash2, Copy, Check, Key } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -18,11 +18,7 @@ export default function ApiKeyManager({ userId }: { userId: string }) {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [keyName, setKeyName] = useState('');
 
-  useEffect(() => {
-    fetchKeys();
-  }, [userId]);
-
-  const fetchKeys = async () => {
+  const fetchKeys = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('api_keys')
@@ -34,7 +30,12 @@ export default function ApiKeyManager({ userId }: { userId: string }) {
       setKeys(data);
     }
     setLoading(false);
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchKeys();
+  }, [fetchKeys]);
 
   const generateKey = async () => {
     // 1. Generate random key
@@ -116,7 +117,7 @@ export default function ApiKeyManager({ userId }: { userId: string }) {
                 </div>
                 <div className="flex-1">
                     <h4 className="text-green-900 font-bold text-lg mb-1">Key Generated Successfully</h4>
-                    <p className="text-green-700 mb-4">Copy this key now. You won't be able to see it again!</p>
+                    <p className="text-green-700 mb-4">Copy this key now. You won&apos;t be able to see it again!</p>
                     <div className="flex items-center gap-2 bg-white p-4 rounded-lg border border-green-100 font-mono text-base shadow-inner">
                         <span className="flex-1 break-all text-slate-800 font-bold tracking-wide">{newKey}</span>
                         <CopyButton text={newKey} />

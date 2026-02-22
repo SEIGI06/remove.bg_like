@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import ApiKeyManager from "@/components/profile/api-key-manager";
 import Link from "next/link";
-import { Home, LogOut, User, Coins } from "lucide-react";
+import { User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils"; // Assuming this exists based on page.tsx
@@ -31,47 +31,10 @@ export default function ProfilePage() {
     });
   }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
-
   if (!user) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Top Navigation */}
-      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
-        <Link
-          href="/"
-          className="font-extrabold text-2xl tracking-tight text-slate-900"
-        >
-          OpenRemover{" "}
-          <span className="text-blue-600 font-medium">Developer</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          {/* Credit Badge in Nav */}
-          {credits !== null && (
-              <div className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg" title="Remaining credits">
-                  <Coins className="w-4 h-4 text-amber-500" />
-                  <span className={cn(credits <= 2 ? 'text-red-500' : 'text-slate-700')}>{credits}</span>
-              </div>
-          )}
-          <Link
-            href="/"
-            className="text-sm font-semibold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Home className="w-4 h-4" /> Home
-          </Link>
-          <button
-            onClick={handleSignOut}
-            className="text-sm font-semibold text-slate-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg transition-all flex items-center gap-2 border border-transparent hover:border-red-100"
-          >
-            <LogOut className="w-4 h-4" /> Sign Out
-          </button>
-        </div>
-      </nav>
-
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Header Section */}
         <div className="mb-8">

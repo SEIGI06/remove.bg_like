@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, Key, Send, AlertTriangle, Code2, Coins, Gauge, Copy, Check, ChevronRight, ArrowLeft, Zap, User } from 'lucide-react';
+import { BookOpen, Key, Send, AlertTriangle, Code2, Coins, Gauge, Copy, Check, ChevronRight, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Reusable copy button
@@ -112,24 +112,6 @@ export default function DocsPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-            {/* Header */}
-            <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-                <Link href="/" className="flex items-center gap-2 group">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                        <div className="w-5 h-5 bg-white rounded-full opacity-50" />
-                    </div>
-                    <span className="font-extrabold text-2xl tracking-tight text-slate-900">OpenRemover</span>
-                </Link>
-                <div className="flex items-center gap-3">
-                    <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                        <ArrowLeft className="w-4 h-4" /> Back to App
-                    </Link>
-                    <Link href="/profile" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm">
-                        <User className="w-4 h-4" /> Profile
-                    </Link>
-                </div>
-            </nav>
-
             <div className="max-w-7xl mx-auto px-6 py-12 flex gap-10">
                 {/* Sidebar Navigation */}
                 <aside className="hidden lg:block w-64 shrink-0">

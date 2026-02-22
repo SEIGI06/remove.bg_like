@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
-import { Loader2, Upload, Download, ImageIcon, User, LogIn, ChevronDown, RotateCcw, Coins, Pipette } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Upload, Download, ImageIcon, ChevronDown, RotateCcw, Pipette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -17,7 +16,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
   const [modelInfo, setModelInfo] = useState<string | null>(null);
   const [modelErrors, setModelErrors] = useState<string[]>([]);
   
@@ -46,32 +44,19 @@ export default function Home() {
     { name: 'Blue', value: '#0000ff', class: 'bg-blue-600' },
   ];
 
-  // Fetch credits when user is logged in
-  const fetchCredits = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', userId)
-      .single();
-    if (data) setCredits(data.credits);
-  }, []);
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user?.id) fetchCredits(session.user.id);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session?.user?.id) fetchCredits(session.user.id);
-      else setCredits(null);
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchCredits]);
+  }, []);
 
   // Shared file handler for upload, drop, and paste
   const handleNewFile = useCallback((f: File) => {
@@ -267,9 +252,6 @@ export default function Home() {
             }
         }
 
-        // Refresh credits after successful processing
-        if (session?.user?.id) fetchCredits(session.user.id);
-
     } catch (err: unknown) {
         console.error(err);
         setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -343,38 +325,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header */}
-      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
-        <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
-                <div className="w-4 h-4 bg-white rounded-full opacity-50" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-slate-900">OpenRemover</span>
-        </Link>
-        <div className="flex items-center gap-3">
-            <Link href="/docs" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors px-3 py-2 rounded-lg hover:bg-slate-100">
-                API Docs
-            </Link>
-            {session ? (
-                <>
-                    {credits !== null && (
-                        <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg" title="Remaining credits">
-                            <Coins className="w-4 h-4 text-amber-500" />
-                            <span className={cn(credits <= 2 ? 'text-red-500' : 'text-slate-700')}>{credits}</span>
-                        </div>
-                    )}
-                    <Link href="/profile" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm">
-                        <User className="w-4 h-4" /> Profile
-                    </Link>
-                </>
-            ) : (
-                <Link href="/login" className="flex items-center gap-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2.5 rounded-lg shadow-sm transition-colors">
-                    <LogIn className="w-4 h-4" /> Login
-                </Link>
-            )}
-        </div>
-      </nav>
-
       <main className="max-w-6xl mx-auto px-6 py-16">
         {/* Hero Section */}
         <div className="text-center mb-16 space-y-6">
